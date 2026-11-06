@@ -2,7 +2,7 @@
 
 Распределённый REST API бронирования отелей: Eureka, API Gateway, Booking Service и Hotel Service.
 
-Сейчас собран каркас. Бизнес-операции бронирования, JWT и сага появятся следующими этапами. Каждый сервис — отдельное приложение Spring Boot 3.5 на Java 17. Booking и Hotel поднимают свою in-memory H2.
+Сейчас работают реестр, шлюз и учётные записи. Бронирование, отели и сага появятся следующими этапами. Каждый сервис — отдельное приложение Spring Boot 3.5 на Java 17. Booking и Hotel поднимают свою in-memory H2 и сами проверяют JWT.
 
 ## Модули
 
@@ -64,4 +64,38 @@ OpenAPI:
 - Hotel: http://localhost:8082/swagger-ui.html
 - Gateway: http://localhost:8080/swagger-ui.html
 
-Публичные префиксы шлюза уже заданы: `/user/**`, `/booking/**`, `/bookings/**`, `/api/bookings/**` идут в Booking; `/api/hotels/**` и `/api/rooms/**` идут в Hotel. Сами операции ещё не реализованы.
+Публичные префиксы шлюза: `/user/**`, `/booking/**`, `/bookings/**`, `/api/bookings/**` идут в Booking; `/api/hotels/**` и `/api/rooms/**` идут в Hotel.
+
+## Учётные записи
+
+Токен HS256 живёт один час. В нём есть `sub`, `role` и `uid`. Booking выпускает токен, Booking и Hotel проверяют подпись и срок сами. Роли: `USER` и `ADMIN`.
+
+В базе заранее есть администратор `admin` / `admin12345`. Это локальный пароль для разработки.
+
+Регистрация создаёт пользователя с ролью `USER` и сразу возвращает токен:
+
+```bash
+curl -s -X POST http://localhost:8080/user/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"ada","password":"password1"}'
+```
+
+Вход:
+
+```bash
+curl -s -X POST http://localhost:8080/user/auth \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"admin12345"}'
+```
+
+Дальше заголовок `Authorization: Bearer <token>`.
+
+| Операция | Кто |
+| --- | --- |
+| `POST /user/register` | без токена |
+| `POST /user/auth` | без токена |
+| `POST /user` | ADMIN, тело `username`, `password`, `role` |
+| `PATCH /user` | ADMIN, тело `id`, `username`, `role`, необязательный `password` |
+| `DELETE /user?id=` | ADMIN |
+
+Запрос без токена получает `401`. Токен есть, но роль не подходит — `403`. Оба ответа в формате `ErrorDTO`.

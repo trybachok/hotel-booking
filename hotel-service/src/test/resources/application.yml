@@ -1,3 +1,9 @@
+app:
+  jwt:
+    secret: hotel-booking-dev-secret-key-32b
+    ttl: 1h
+    issuer: hotel-booking
+
 eureka:
   client:
     enabled: false

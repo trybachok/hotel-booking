@@ -14,6 +14,12 @@ spring:
       ddl-auto: none
     database-platform: org.hibernate.dialect.H2Dialect
 
+app:
+  jwt:
+    secret: hotel-booking-dev-secret-key-32b
+    ttl: 1h
+    issuer: hotel-booking
+
 eureka:
   client:
     service-url:

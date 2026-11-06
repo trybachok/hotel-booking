@@ -2,19 +2,56 @@ package com.hotelbooking.common.web;
 
 import com.hotelbooking.common.error.ErrorDTO;
 import com.hotelbooking.common.error.ErrorResponses;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 @RestControllerAdvice
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
+
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<ErrorDTO> handleStatus(
+      ResponseStatusException exception, WebRequest request) {
+    int code = exception.getStatusCode().value();
+    HttpStatus status = HttpStatus.resolve(code);
+    String reason = status == null ? "Error" : status.getReasonPhrase();
+    String message = exception.getReason() == null ? reason : exception.getReason();
+    return ResponseEntity.status(code)
+        .body(ErrorResponses.of(code, reason, message, path(request), traceId(request)));
+  }
+
+  @Override
+  protected ResponseEntity<Object> handleMethodArgumentNotValid(
+      MethodArgumentNotValidException exception,
+      HttpHeaders headers,
+      HttpStatusCode status,
+      WebRequest request) {
+    String message =
+        exception.getBindingResult().getFieldErrors().stream()
+            .map(error -> error.getField() + " " + error.getDefaultMessage())
+            .collect(Collectors.joining("; "));
+    if (message.isBlank()) {
+      message = "Validation failed";
+    }
+    ErrorDTO body =
+        ErrorResponses.of(
+            HttpStatus.BAD_REQUEST.value(),
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            message,
+            path(request),
+            traceId(request));
+    return ResponseEntity.badRequest().body(body);
+  }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorDTO> handleUnexpected(Exception exception, WebRequest request) {

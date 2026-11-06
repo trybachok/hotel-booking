@@ -17,13 +17,12 @@ class BookingErrorDtoTests {
   @Autowired private MockMvc mockMvc;
 
   @Test
-  void unknownPathReturnsErrorDto() throws Exception {
+  void unknownPathWithoutTokenIsUnauthorized() throws Exception {
     mockMvc
         .perform(get("/missing").header("traceId", "trace-booking"))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.status").value(404))
-        .andExpect(jsonPath("$.error").value("Not Found"))
-        .andExpect(jsonPath("$.path").value("/missing"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.status").value(401))
+        .andExpect(jsonPath("$.error").value("Unauthorized"))
         .andExpect(jsonPath("$.traceId").value("trace-booking"))
         .andExpect(jsonPath("$.timestamp").exists());
   }
