@@ -42,3 +42,28 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+resilience4j:
+  retry:
+    instances:
+      hotel:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - com.hotelbooking.booking.hotelclient.HotelTransientException
+  circuitbreaker:
+    instances:
+      hotel:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        record-exceptions:
+          - com.hotelbooking.booking.hotelclient.HotelTransientException
+
+hotel:
+  client:
+    connect-timeout: 2s
+    read-timeout: 2s

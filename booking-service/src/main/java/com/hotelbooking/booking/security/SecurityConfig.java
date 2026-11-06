@@ -47,6 +47,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/user", "/user/**")
                     .hasRole("ADMIN")
+                    .requestMatchers("/booking", "/booking/**", "/bookings", "/bookings/**")
+                    .hasAnyRole("USER", "ADMIN")
                     .anyRequest()
                     .authenticated())
         .exceptionHandling(
