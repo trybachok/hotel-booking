@@ -4,10 +4,22 @@ app:
     ttl: 1h
     issuer: hotel-booking
 
-eureka:
-  client:
-    enabled: false
 spring:
+  datasource:
+    url: jdbc:h2:mem:hotel;MODE=PostgreSQL
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  sql:
+    init:
+      mode: always
   cloud:
     discovery:
       enabled: false
+
+eureka:
+  client:
+    enabled: false

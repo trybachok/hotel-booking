@@ -99,3 +99,20 @@ curl -s -X POST http://localhost:8080/user/auth \
 | `DELETE /user?id=` | ADMIN |
 
 Запрос без токена получает `401`. Токен есть, но роль не подходит — `403`. Оба ответа в формате `ErrorDTO`.
+
+## Отели и номера
+
+`available` означает, что номер не в ремонте. Занятость по датам — это временная блокировка. День выезда в интервал не входит. Список свободных номеров сортируется по id. Рекомендация — те же номера по возрастанию `times_booked`, при равенстве по id.
+
+| Операция | Кто |
+| --- | --- |
+| `POST /api/hotels`, `PATCH /api/hotels/{id}`, `DELETE /api/hotels/{id}` | ADMIN |
+| `GET /api/hotels` | USER, фильтр `name` |
+| `POST /api/rooms`, `PATCH /api/rooms/{id}`, `DELETE /api/rooms/{id}` | ADMIN |
+| `GET /api/rooms?startDate&endDate` | USER, необязательный `hotelId` |
+| `GET /api/rooms/recommend?startDate&endDate` | USER |
+| `GET /api/rooms/statistics` | ADMIN |
+| `POST /api/rooms/{id}/confirm-availability` | только прямой вызов сервиса, не через шлюз |
+| `POST /api/rooms/{id}/release` | только прямой вызов сервиса, не через шлюз |
+
+Повтор того же `requestId` не увеличивает `times_booked` второй раз. Повторный `release` ничего не меняет. В базе заранее есть отели «Астория» и «Нева».

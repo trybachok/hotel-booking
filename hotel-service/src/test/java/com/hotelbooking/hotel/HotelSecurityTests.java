@@ -51,14 +51,14 @@ class HotelSecurityTests {
   void adminPassesAuthorizationAndReachesMissingHandler() throws Exception {
     mockMvc
         .perform(post("/api/hotels").header("Authorization", "Bearer " + token("ADMIN")))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isBadRequest());
   }
 
   @Test
   void userCanRequestHotelList() throws Exception {
     mockMvc
         .perform(get("/api/hotels").header("Authorization", "Bearer " + token("USER")))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isOk());
   }
 
   @Test
