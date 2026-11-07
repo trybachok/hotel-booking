@@ -3,6 +3,8 @@ package com.hotelbooking.common.web;
 import com.hotelbooking.common.error.ErrorDTO;
 import com.hotelbooking.common.error.ErrorResponses;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -19,6 +21,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 
+  private static final Logger log = LoggerFactory.getLogger(RestExceptionHandler.class);
+
   @ExceptionHandler(ResponseStatusException.class)
   public ResponseEntity<ErrorDTO> handleStatus(
       ResponseStatusException exception, WebRequest request) {
@@ -26,6 +30,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     HttpStatus status = HttpStatus.resolve(code);
     String reason = status == null ? "Error" : status.getReasonPhrase();
     String message = exception.getReason() == null ? reason : exception.getReason();
+    logStatus(code, path(request), message);
     return ResponseEntity.status(code)
         .body(ErrorResponses.of(code, reason, message, path(request), traceId(request)));
   }
@@ -43,6 +48,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     if (message.isBlank()) {
       message = "Validation failed";
     }
+    logStatus(HttpStatus.BAD_REQUEST.value(), path(request), message);
     ErrorDTO body =
         ErrorResponses.of(
             HttpStatus.BAD_REQUEST.value(),
@@ -62,7 +68,16 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
             "Unexpected error",
             path(request),
             traceId(request));
+    log.error("status=500 path={} message=Unexpected error", path(request));
     return ResponseEntity.internalServerError().body(body);
+  }
+
+  private static void logStatus(int code, String path, String message) {
+    if (code >= 500) {
+      log.error("status={} path={} message={}", code, path, message);
+    } else {
+      log.warn("status={} path={} message={}", code, path, message);
+    }
   }
 
   @Override
@@ -75,6 +90,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     HttpStatus status = HttpStatus.resolve(statusCode.value());
     String reason = status == null ? "Error" : status.getReasonPhrase();
     String message = exception.getMessage() == null ? reason : exception.getMessage();
+    logStatus(statusCode.value(), path(request), message);
     ErrorDTO error =
         ErrorResponses.of(statusCode.value(), reason, message, path(request), traceId(request));
     return new ResponseEntity<>(error, headers, statusCode);

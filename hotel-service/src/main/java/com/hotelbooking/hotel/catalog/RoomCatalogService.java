@@ -9,6 +9,9 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +19,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class RoomCatalogService {
+
+  private static final Logger log = LoggerFactory.getLogger(RoomCatalogService.class);
 
   private final RoomRepository rooms;
   private final RoomLockRepository locks;
@@ -109,6 +114,12 @@ public class RoomCatalogService {
     lock.setEndDate(request.endDate());
     locks.save(lock);
     room.setTimesBooked(room.getTimesBooked() + 1);
+    MDC.put("bookingId", Long.toString(request.bookingId()));
+    try {
+      log.info("roomId={} requestId={} hold created", roomId, request.requestId());
+    } finally {
+      MDC.remove("bookingId");
+    }
     return toLock(lock);
   }
 
@@ -125,6 +136,12 @@ public class RoomCatalogService {
     locks.delete(lock);
     if (room.getTimesBooked() > 0) {
       room.setTimesBooked(room.getTimesBooked() - 1);
+    }
+    MDC.put("bookingId", Long.toString(lock.getBookingId()));
+    try {
+      log.info("roomId={} requestId={} hold released", roomId, requestId);
+    } finally {
+      MDC.remove("bookingId");
     }
   }
 

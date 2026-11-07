@@ -3,6 +3,8 @@ package com.hotelbooking.gateway;
 import java.util.List;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -25,6 +27,8 @@ import reactor.core.publisher.Mono;
 
 @Component
 public class JwtGatewayFilter implements GlobalFilter, Ordered {
+
+  private static final Logger log = LoggerFactory.getLogger(JwtGatewayFilter.class);
 
   private static final List<String> PUBLIC_PREFIXES =
       List.of("/actuator", "/swagger-ui", "/v3/api-docs", "/webjars");
@@ -54,11 +58,13 @@ public class JwtGatewayFilter implements GlobalFilter, Ordered {
     }
     String header = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
     if (header == null || !header.startsWith("Bearer ")) {
+      log.info("rejected unauthenticated request path={}", exchange.getRequest().getPath().value());
       return errors.write(exchange, HttpStatus.UNAUTHORIZED, "Authentication required");
     }
     try {
       jwtDecoder.decode(header.substring("Bearer ".length()));
     } catch (JwtException invalid) {
+      log.info("rejected invalid token path={}", exchange.getRequest().getPath().value());
       return errors.write(exchange, HttpStatus.UNAUTHORIZED, "Invalid token");
     }
     return chain.filter(exchange);

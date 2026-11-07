@@ -126,3 +126,52 @@ curl -s -X POST http://localhost:8080/user/auth \
 ## Шлюз
 
 Защищённые пути требуют `Authorization: Bearer`. Шлюз проверяет подпись и срок токена до передачи запроса. Регистрация, вход, health и Swagger остаются открытыми. Если заголовок `traceId` не передан, шлюз создаёт его и прокидывает в сервис и в ответ. `confirm-availability` и `release` по-прежнему отвечают 404.
+
+## Схема
+
+```mermaid
+flowchart TB
+  client[Клиент]
+  gateway[API Gateway]
+  eureka[Eureka]
+  booking[Booking Service и H2]
+  hotel[Hotel Service и H2]
+  client --> gateway
+  gateway --> booking
+  gateway --> hotel
+  booking -->|"confirm и release"| hotel
+  gateway --> eureka
+  booking --> eureka
+  hotel --> eureka
+```
+
+Решения записаны в [docs/adr/README.md](docs/adr/README.md): границы сервисов, сага вместо общей транзакции, рекомендация сортировкой `times_booked`, полуоткрытый интервал проживания.
+
+## Таблицы
+
+Booking:
+
+| Таблица | Поля |
+| --- | --- |
+| `users` | `id`, `username`, `password`, `role` |
+| `bookings` | `id`, `user_id`, `room_id`, `start_date`, `end_date`, `status`, `created_at`, `request_id` |
+
+Индексы: уникальный `username`, уникальный `request_id`, `(user_id, created_at)`, `(room_id, start_date, end_date)`.
+
+Hotel:
+
+| Таблица | Поля |
+| --- | --- |
+| `hotels` | `id`, `name`, `address` |
+| `rooms` | `id`, `hotel_id`, `number`, `available`, `times_booked` |
+| `room_locks` | `id`, `room_id`, `booking_id`, `request_id`, `start_date`, `end_date` |
+
+Индексы: `hotels.name`, уникальная пара `(hotel_id, number)`, `(available, times_booked, id)`, уникальный `request_id`, `(room_id, start_date, end_date)`.
+
+На чистой базе номер `1` — это «Астория», комната `101`.
+
+## Демонстрация
+
+Пароль `demo` / `password1`. У него уже есть прошедшая бронь `2026-11-01`–`2026-11-03`. Администратор — `admin` / `admin12345`.
+
+Рекомендация «Астории» на будущие даты ставит комнату `102` раньше `101`, потому что у `102` меньше `times_booked`. Комната `201` не попадает в список: она в ремонте. Логи пишутся JSON и содержат `traceId`; шаги брони ещё содержат `bookingId`.

@@ -1,6 +1,7 @@
 package com.hotelbooking.gateway;
 
 import java.util.UUID;
+import org.slf4j.MDC;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -21,7 +22,10 @@ public class TraceIdFilter implements GlobalFilter, Ordered {
         incoming == null || incoming.isBlank() ? UUID.randomUUID().toString() : incoming;
     ServerHttpRequest request = exchange.getRequest().mutate().header(TRACE_ID, traceId).build();
     exchange.getResponse().getHeaders().set(TRACE_ID, traceId);
-    return chain.filter(exchange.mutate().request(request).build());
+    MDC.put(TRACE_ID, traceId);
+    return chain
+        .filter(exchange.mutate().request(request).build())
+        .doFinally(signal -> MDC.remove(TRACE_ID));
   }
 
   @Override

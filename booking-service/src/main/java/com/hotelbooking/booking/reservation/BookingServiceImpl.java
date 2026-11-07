@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -37,8 +38,18 @@ public class BookingServiceImpl implements BookingService {
   @Override
   public BookingResponse create(CreateBookingRequest request, long userId, String bearerToken) {
     requireDates(request.startDate(), request.endDate());
+    try {
+      return createBooking(request, userId, bearerToken);
+    } finally {
+      MDC.remove("bookingId");
+    }
+  }
+
+  private BookingResponse createBooking(
+      CreateBookingRequest request, long userId, String bearerToken) {
     BookingEntity existing = bookings.findByRequestId(request.requestId()).orElse(null);
     if (existing != null) {
+      MDC.put("bookingId", Long.toString(existing.getId()));
       ensureOwner(existing, userId);
       if (existing.getStatus() != BookingStatus.PENDING) {
         return toResponse(existing);
@@ -117,13 +128,18 @@ public class BookingServiceImpl implements BookingService {
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
     ensureOwner(booking, userId);
-    if (booking.getStatus() == BookingStatus.CANCELLED) {
-      return toResponse(booking);
+    MDC.put("bookingId", Long.toString(booking.getId()));
+    try {
+      if (booking.getStatus() == BookingStatus.CANCELLED) {
+        return toResponse(booking);
+      }
+      releaseQuietly(booking, bearerToken);
+      BookingEntity cancelled = markCancelled(booking.getId());
+      log.info("bookingId={} status CANCELLED compensation=user-cancel", cancelled.getId());
+      return toResponse(cancelled);
+    } finally {
+      MDC.remove("bookingId");
     }
-    releaseQuietly(booking, bearerToken);
-    BookingEntity cancelled = markCancelled(booking.getId());
-    log.info("bookingId={} status CANCELLED compensation=user-cancel", cancelled.getId());
-    return toResponse(cancelled);
   }
 
   private BookingResponse confirmOrCompensate(
@@ -201,6 +217,7 @@ public class BookingServiceImpl implements BookingService {
               return bookings.save(booking);
             });
     log.info("bookingId={} status PENDING roomId={}", saved.getId(), saved.getRoomId());
+    MDC.put("bookingId", Long.toString(saved.getId()));
     return saved;
   }
 
