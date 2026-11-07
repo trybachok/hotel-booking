@@ -33,6 +33,8 @@ import org.springframework.test.context.DynamicPropertySource;
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class BookingHotelIntegrationTests {
 
+  private static final String TEST_SECRET = "hotel-booking-test-secret-key-32b";
+
   private static ConfigurableApplicationContext hotel;
   private static int hotelPort;
 
@@ -43,6 +45,10 @@ class BookingHotelIntegrationTests {
 
   @DynamicPropertySource
   static void hotelAddress(DynamicPropertyRegistry registry) {
+    registry.add("app.jwt.secret", () -> TEST_SECRET);
+    registry.add("app.jwt.issuer", () -> "hotel-booking");
+    registry.add("app.admin.username", () -> "admin");
+    registry.add("app.admin.password", () -> "admin12345");
     hotel =
         new SpringApplicationBuilder(HotelServiceApplication.class)
             .run(
@@ -52,7 +58,7 @@ class BookingHotelIntegrationTests {
                 "--spring.datasource.url=jdbc:h2:mem:hotel-it;MODE=PostgreSQL",
                 "--spring.jpa.hibernate.ddl-auto=none",
                 "--spring.sql.init.mode=always",
-                "--app.jwt.secret=hotel-booking-test-secret-key-32b",
+                "--app.jwt.secret=" + TEST_SECRET,
                 "--app.jwt.issuer=hotel-booking");
     hotelPort = ((WebServerApplicationContext) hotel).getWebServer().getPort();
     registry.add("hotel.client.base-url", () -> "http://127.0.0.1:" + hotelPort);
