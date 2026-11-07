@@ -1,0 +1,25 @@
+app:
+  jwt:
+    secret: hotel-booking-test-secret-key-32b
+    ttl: 1h
+    issuer: hotel-booking
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:hotel;MODE=PostgreSQL
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  sql:
+    init:
+      mode: always
+  cloud:
+    discovery:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false

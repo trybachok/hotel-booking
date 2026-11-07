@@ -1,5 +1,6 @@
 .idea
 .git
+target/
 
 # Compiled class file
 *.class

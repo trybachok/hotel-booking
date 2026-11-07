@@ -1,0 +1,23 @@
+eureka:
+  client:
+    enabled: false
+spring:
+  cloud:
+    discovery:
+      enabled: false
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 200
+            response-timeout: 500ms
+          routes:
+            - id: test-pass-through
+              uri: http://127.0.0.1:9
+              predicates:
+                - Path=/**
+
+app:
+  jwt:
+    secret: hotel-booking-test-secret-key-32b
+    issuer: hotel-booking
