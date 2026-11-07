@@ -12,6 +12,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,9 +70,10 @@ public class RoomCatalogService {
     if (!rooms.existsById(id)) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found");
     }
-    if (locks.countByRoomId(id) > 0) {
+    if (locks.countByRoomIdAndReleasedFalse(id) > 0) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Room has an active hold");
     }
+    locks.deleteByRoomId(id);
     rooms.deleteById(id);
   }
 
@@ -91,17 +93,14 @@ public class RoomCatalogService {
   @Transactional
   public LockResponse confirm(long roomId, ConfirmAvailabilityRequest request) {
     StayInterval.requireValid(request.startDate(), request.endDate());
-    RoomLockEntity existing = locks.findByRequestId(request.requestId()).orElse(null);
-    if (existing != null) {
-      if (!existing.getRoom().getId().equals(roomId)) {
-        throw new ResponseStatusException(HttpStatus.CONFLICT, "Request id is already used");
-      }
-      return catalogMapper.toLock(existing);
-    }
     RoomEntity room =
         rooms
             .findByIdForUpdate(roomId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
+    RoomLockEntity existing = locks.findByRequestId(request.requestId()).orElse(null);
+    if (existing != null) {
+      return existingHold(roomId, existing);
+    }
     if (!room.isAvailable()) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Room is out of service");
     }
@@ -115,7 +114,19 @@ public class RoomCatalogService {
     lock.setRequestId(request.requestId());
     lock.setStartDate(request.startDate());
     lock.setEndDate(request.endDate());
-    locks.save(lock);
+    lock.setReleased(false);
+    try {
+      locks.saveAndFlush(lock);
+    } catch (DataIntegrityViolationException duplicate) {
+      RoomLockEntity winner =
+          locks
+              .findByRequestId(request.requestId())
+              .orElseThrow(
+                  () ->
+                      new ResponseStatusException(
+                          HttpStatus.CONFLICT, "Request id is already used"));
+      return existingHold(roomId, winner);
+    }
     room.setTimesBooked(room.getTimesBooked() + 1);
     MDC.put("bookingId", Long.toString(request.bookingId()));
     try {
@@ -128,21 +139,62 @@ public class RoomCatalogService {
 
   @Transactional
   public void release(long roomId, String requestId) {
+    RoomEntity room = rooms.findByIdForUpdate(roomId).orElse(null);
     RoomLockEntity lock = locks.findByRequestId(requestId).orElse(null);
-    if (lock == null) {
+    if (lock != null) {
+      if (!lock.getRoom().getId().equals(roomId)) {
+        throw new ResponseStatusException(
+            HttpStatus.CONFLICT, "Request id belongs to another room");
+      }
+      markReleased(room, lock);
       return;
     }
-    if (!lock.getRoom().getId().equals(roomId)) {
-      throw new ResponseStatusException(HttpStatus.CONFLICT, "Request id belongs to another room");
+    if (room == null) {
+      return;
     }
-    RoomEntity room = rooms.findByIdForUpdate(roomId).orElseThrow();
-    locks.delete(lock);
-    if (room.getTimesBooked() > 0) {
+    RoomLockEntity tombstone = new RoomLockEntity();
+    tombstone.setRoom(room);
+    tombstone.setBookingId(0);
+    tombstone.setRequestId(requestId);
+    tombstone.setStartDate(LocalDate.of(1970, 1, 1));
+    tombstone.setEndDate(LocalDate.of(1970, 1, 1));
+    tombstone.setReleased(true);
+    try {
+      locks.saveAndFlush(tombstone);
+    } catch (DataIntegrityViolationException duplicate) {
+      RoomLockEntity winner = locks.findByRequestId(requestId).orElseThrow();
+      if (!winner.getRoom().getId().equals(roomId)) {
+        throw new ResponseStatusException(
+            HttpStatus.CONFLICT, "Request id belongs to another room");
+      }
+      markReleased(room, winner);
+    }
+  }
+
+  private LockResponse existingHold(long roomId, RoomLockEntity existing) {
+    if (!existing.getRoom().getId().equals(roomId)) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Request id is already used");
+    }
+    if (existing.isReleased()) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Request was released");
+    }
+    return catalogMapper.toLock(existing);
+  }
+
+  private void markReleased(RoomEntity room, RoomLockEntity lock) {
+    if (lock.isReleased()) {
+      return;
+    }
+    lock.setReleased(true);
+    if (room != null && room.getTimesBooked() > 0) {
       room.setTimesBooked(room.getTimesBooked() - 1);
     }
     MDC.put("bookingId", Long.toString(lock.getBookingId()));
     try {
-      log.info("roomId={} requestId={} hold released", roomId, requestId);
+      log.info(
+          "roomId={} requestId={} hold released",
+          room == null ? null : room.getId(),
+          lock.getRequestId());
     } finally {
       MDC.remove("bookingId");
     }

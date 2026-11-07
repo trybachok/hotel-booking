@@ -10,12 +10,15 @@ public interface RoomLockRepository extends JpaRepository<RoomLockEntity, Long> 
 
   Optional<RoomLockEntity> findByRequestId(String requestId);
 
-  long countByRoomId(Long roomId);
+  long countByRoomIdAndReleasedFalse(Long roomId);
+
+  void deleteByRoomId(Long roomId);
 
   @Query(
       """
       select slot from RoomLockEntity slot
       where slot.room.id = :roomId
+        and slot.released = false
         and slot.startDate < :end
         and slot.endDate > :start
       """)

@@ -33,6 +33,7 @@ public interface RoomRepository extends JpaRepository<RoomEntity, Long> {
         and not exists (
           select slot.id from RoomLockEntity slot
           where slot.room = room
+            and slot.released = false
             and slot.startDate < :end
             and slot.endDate > :start
         )

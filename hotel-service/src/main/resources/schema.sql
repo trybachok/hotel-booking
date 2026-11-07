@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS room_locks (
     request_id VARCHAR(80) NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
+    released BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT fk_room_locks_room FOREIGN KEY (room_id) REFERENCES rooms (id),
     CONSTRAINT uk_room_locks_request UNIQUE (request_id)
 );
