@@ -36,7 +36,6 @@ public class ErrorDtoAuthenticationEntryPoint implements AuthenticationEntryPoin
       throws IOException {
     response.setStatus(status.value());
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-    String traceId = request.getHeader("traceId");
     objectMapper.writeValue(
         response.getOutputStream(),
         ErrorResponses.of(
@@ -44,6 +43,6 @@ public class ErrorDtoAuthenticationEntryPoint implements AuthenticationEntryPoin
             status.getReasonPhrase(),
             message,
             request.getRequestURI(),
-            traceId == null || traceId.isBlank() ? null : traceId));
+            TraceIds.current(request)));
   }
 }

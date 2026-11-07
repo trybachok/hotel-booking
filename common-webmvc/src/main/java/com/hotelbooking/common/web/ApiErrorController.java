@@ -22,7 +22,7 @@ public class ApiErrorController implements ErrorController {
     String message = rawMessage instanceof String text && !text.isBlank() ? text : reason;
     Object rawPath = request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
     String path = rawPath instanceof String text ? text : request.getRequestURI();
-    ErrorDTO body = ErrorResponses.of(status, reason, message, path, traceId(request));
+    ErrorDTO body = ErrorResponses.of(status, reason, message, path, TraceIds.current(request));
     return ResponseEntity.status(status).body(body);
   }
 
@@ -32,10 +32,5 @@ public class ApiErrorController implements ErrorController {
       return code;
     }
     return HttpStatus.INTERNAL_SERVER_ERROR.value();
-  }
-
-  private static String traceId(HttpServletRequest request) {
-    String traceId = request.getHeader("traceId");
-    return traceId == null || traceId.isBlank() ? null : traceId;
   }
 }

@@ -104,7 +104,6 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   private static String traceId(WebRequest request) {
-    String traceId = request.getHeader("traceId");
-    return traceId == null || traceId.isBlank() ? null : traceId;
+    return TraceIds.current(request);
   }
 }
