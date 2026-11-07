@@ -15,9 +15,11 @@ public class HttpHotelClient {
       new ParameterizedTypeReference<>() {};
 
   private final RestClient restClient;
+  private final ServiceTokenProvider serviceTokens;
 
-  public HttpHotelClient(RestClient hotelRestClient) {
+  public HttpHotelClient(RestClient hotelRestClient, ServiceTokenProvider serviceTokens) {
     this.restClient = hotelRestClient;
+    this.serviceTokens = serviceTokens;
   }
 
   public List<HotelRoom> recommend(LocalDate start, LocalDate end, String bearerToken) {
@@ -53,7 +55,7 @@ public class HttpHotelClient {
           restClient
               .post()
               .uri("/api/rooms/{id}/confirm-availability", roomId)
-              .header("Authorization", "Bearer " + bearerToken)
+              .header("Authorization", "Bearer " + serviceTokens.serviceToken())
               .body(new ConfirmBody(requestId, bookingId, start.toString(), end.toString()))
               .retrieve()
               .onStatus(
@@ -77,7 +79,7 @@ public class HttpHotelClient {
           restClient
               .post()
               .uri("/api/rooms/{id}/release", roomId)
-              .header("Authorization", "Bearer " + bearerToken)
+              .header("Authorization", "Bearer " + serviceTokens.serviceToken())
               .body(new ReleaseBody(requestId))
               .retrieve()
               .onStatus(

@@ -2,6 +2,7 @@ package com.hotelbooking.booking.hotelclient;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -24,6 +25,7 @@ class HttpHotelClientTests {
     fixture
         .server
         .expect(requestTo(containsString("/api/rooms/9/confirm-availability")))
+        .andExpect(header("Authorization", "Bearer service-token"))
         .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
     assertThrows(
@@ -37,6 +39,7 @@ class HttpHotelClientTests {
     fixture
         .server
         .expect(requestTo(containsString("/api/rooms/9/confirm-availability")))
+        .andExpect(header("Authorization", "Bearer service-token"))
         .andRespond(withStatus(HttpStatus.CONFLICT));
 
     assertThrows(
@@ -50,6 +53,7 @@ class HttpHotelClientTests {
     fixture
         .server
         .expect(requestTo(containsString("/api/rooms/recommend")))
+        .andExpect(header("Authorization", "Bearer token"))
         .andRespond(withSuccess("{", MediaType.APPLICATION_JSON));
 
     assertThrows(
@@ -59,7 +63,7 @@ class HttpHotelClientTests {
   private static Fixture fixture() {
     RestClient.Builder builder = RestClient.builder().baseUrl("http://hotel");
     MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-    return new Fixture(server, new HttpHotelClient(builder.build()));
+    return new Fixture(server, new HttpHotelClient(builder.build(), () -> "service-token"));
   }
 
   private record Fixture(MockRestServiceServer server, HttpHotelClient client) {}

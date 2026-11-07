@@ -1,5 +1,6 @@
 package com.hotelbooking.booking.hotelclient;
 
+import com.hotelbooking.booking.user.JwtService;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +14,11 @@ import org.springframework.web.client.RestClient;
 
 @Configuration
 public class HotelClientConfig {
+
+  @Bean
+  ServiceTokenProvider serviceTokenProvider(JwtService tokens) {
+    return tokens::serviceToken;
+  }
 
   @Bean
   @LoadBalanced

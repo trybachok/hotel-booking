@@ -47,7 +47,7 @@ public class SecurityConfig {
                         HttpMethod.POST,
                         "/api/rooms/*/confirm-availability",
                         "/api/rooms/*/release")
-                    .authenticated()
+                    .hasRole("SERVICE")
                     .requestMatchers(HttpMethod.POST, "/api/hotels", "/api/hotels/**", "/api/rooms")
                     .hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PATCH, "/api/**")
@@ -57,7 +57,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/**")
                     .hasAnyRole("USER", "ADMIN")
                     .anyRequest()
-                    .authenticated())
+                    .hasAnyRole("USER", "ADMIN", "SERVICE"))
         .exceptionHandling(
             errors -> errors.authenticationEntryPoint(entryPoint).accessDeniedHandler(denied))
         .oauth2ResourceServer(

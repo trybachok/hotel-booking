@@ -74,14 +74,14 @@ public class RoomController {
   }
 
   @PostMapping("/{id}/confirm-availability")
-  @PreAuthorize("isAuthenticated()")
+  @PreAuthorize("hasRole('SERVICE')")
   public LockResponse confirm(
       @PathVariable long id, @Valid @RequestBody ConfirmAvailabilityRequest request) {
     return rooms.confirm(id, request);
   }
 
   @PostMapping("/{id}/release")
-  @PreAuthorize("isAuthenticated()")
+  @PreAuthorize("hasRole('SERVICE')")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void release(@PathVariable long id, @Valid @RequestBody ReleaseRequest request) {
     rooms.release(id, request.requestId());

@@ -27,6 +27,20 @@ public class JwtService {
     this.encoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
   }
 
+  public String serviceToken() {
+    Instant now = Instant.now();
+    JwtClaimsSet claims =
+        JwtClaimsSet.builder()
+            .issuer(properties.issuer())
+            .subject("booking-service")
+            .issuedAt(now)
+            .expiresAt(now.plus(properties.ttl()))
+            .claim("role", "SERVICE")
+            .build();
+    JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+    return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+  }
+
   public String issue(UserEntity user) {
     Instant now = Instant.now();
     JwtClaimsSet claims =

@@ -50,7 +50,7 @@ public class SecurityConfig {
                     .requestMatchers("/booking", "/booking/**", "/bookings", "/bookings/**")
                     .hasAnyRole("USER", "ADMIN")
                     .anyRequest()
-                    .authenticated())
+                    .hasAnyRole("USER", "ADMIN"))
         .exceptionHandling(
             errors -> errors.authenticationEntryPoint(entryPoint).accessDeniedHandler(denied))
         .oauth2ResourceServer(

@@ -110,7 +110,7 @@ class HotelCatalogTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"number\":\"C\",\"available\":false}"))
         .andExpect(status().isOk());
-    confirm(admin, busy, "busy-later", 1, "2026-12-10", "2026-12-12");
+    confirm(token("SERVICE"), busy, "busy-later", 1, "2026-12-10", "2026-12-12");
 
     String start = LocalDate.of(2026, 12, 1).toString();
     String end = LocalDate.of(2026, 12, 3).toString();
@@ -142,13 +142,14 @@ class HotelCatalogTests {
   @Test
   void confirmIsIdempotentAndReleaseFreesTheRoom() throws Exception {
     String admin = token("ADMIN");
+    String service = token("SERVICE");
     Number hotelId = createHotel(admin, "Hold Hotel", "Hold street");
     Number roomId = createRoom(admin, hotelId, "1");
-    confirm(admin, roomId, "req-1", 10);
+    confirm(service, roomId, "req-1", 10);
     mockMvc
         .perform(
             post("/api/rooms/" + roomId + "/confirm-availability")
-                .header("Authorization", "Bearer " + admin)
+                .header("Authorization", "Bearer " + service)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(confirmBody("req-1", 10)))
         .andExpect(status().isOk())
@@ -169,7 +170,7 @@ class HotelCatalogTests {
     mockMvc
         .perform(
             post("/api/rooms/" + roomId + "/confirm-availability")
-                .header("Authorization", "Bearer " + admin)
+                .header("Authorization", "Bearer " + service)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(confirmBody("req-2", 11)))
         .andExpect(status().isConflict());
@@ -177,14 +178,14 @@ class HotelCatalogTests {
     mockMvc
         .perform(
             post("/api/rooms/" + roomId + "/release")
-                .header("Authorization", "Bearer " + admin)
+                .header("Authorization", "Bearer " + service)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"requestId\":\"req-1\"}"))
         .andExpect(status().isNoContent());
     mockMvc
         .perform(
             post("/api/rooms/" + roomId + "/release")
-                .header("Authorization", "Bearer " + admin)
+                .header("Authorization", "Bearer " + service)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"requestId\":\"req-1\"}"))
         .andExpect(status().isNoContent());
