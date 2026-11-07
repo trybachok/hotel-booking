@@ -119,6 +119,20 @@ class BookingHotelIntegrationTests {
     assertEquals("CANCELLED", onlyStatus(guest));
   }
 
+  @Test
+  void missingRoomCancelsTheBooking() throws Exception {
+    String guest = token("missing-room", "password1", true);
+    LocalDate start = LocalDate.now().plusDays(70);
+    HttpResult result =
+        post(
+            bookingPort,
+            "/booking",
+            bookingBody("missing-room-req", 9_999_999L, start, start.plusDays(1)),
+            guest);
+    assertEquals(503, result.status(), result.body());
+    assertEquals("CANCELLED", onlyStatus(guest));
+  }
+
   private int confirmedCount(String bearer) throws Exception {
     JsonNode content = json.readTree(get(bookingPort, "/bookings", bearer).body()).get("content");
     int confirmed = 0;

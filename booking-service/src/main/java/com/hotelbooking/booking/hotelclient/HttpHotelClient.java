@@ -5,8 +5,8 @@ import java.util.List;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 @Component
 public class HttpHotelClient {
@@ -97,11 +97,45 @@ public class HttpHotelClient {
   private <T> T exchange(Call<T> call) {
     try {
       return call.run();
-    } catch (HotelConflictException | HotelTransientException known) {
-      throw known;
-    } catch (ResourceAccessException timeout) {
-      throw new HotelTransientException("Hotel call timed out", timeout);
+    } catch (RuntimeException failure) {
+      HotelConflictException conflict = cause(failure, HotelConflictException.class);
+      if (conflict != null) {
+        throw conflict;
+      }
+      HotelTransientException transientFailure = cause(failure, HotelTransientException.class);
+      if (transientFailure != null) {
+        throw transientFailure;
+      }
+      if (failure instanceof RestClientException || conversionFailure(failure)) {
+        throw new HotelTransientException("Hotel call failed", failure);
+      }
+      throw failure;
     }
+  }
+
+  private static boolean conversionFailure(Throwable failure) {
+    Throwable current = failure;
+    while (current != null) {
+      String name = current.getClass().getName();
+      if (name.contains("HttpMessageConversion")
+          || name.contains("HttpMessageNotReadable")
+          || name.contains("DecodingException")) {
+        return true;
+      }
+      current = current.getCause();
+    }
+    return false;
+  }
+
+  private static <T extends RuntimeException> T cause(Throwable failure, Class<T> type) {
+    Throwable current = failure;
+    while (current != null) {
+      if (type.isInstance(current)) {
+        return type.cast(current);
+      }
+      current = current.getCause();
+    }
+    return null;
   }
 
   private interface Call<T> {
