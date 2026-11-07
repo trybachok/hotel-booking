@@ -15,6 +15,8 @@
 | `common` | — | Общий `ErrorDTO` |
 | `common-webmvc` | — | Единый обработчик ошибок для servlet-сервисов |
 
+Описание каждого модуля: [eureka-server/README.md](eureka-server/README.md), [api-gateway/README.md](api-gateway/README.md), [booking-service/README.md](booking-service/README.md), [hotel-service/README.md](hotel-service/README.md).
+
 ## Требования к окружению
 
 - JDK 17 или новее

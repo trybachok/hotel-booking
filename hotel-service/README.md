@@ -1,0 +1,27 @@
+# hotel-service
+
+Сервис отелей и номеров. Порт `8082`. Своя in-memory H2 `hotel`.
+
+## За что отвечает
+
+Каталог отелей и номеров, рекомендация по `times_booked`, статистика загрузки и временная блокировка дат. Поле `available` означает ремонт, а не занятость по календарю.
+
+## Запуск
+
+Из корня репозитория, после Eureka:
+
+```bash
+mvn -pl hotel-service spring-boot:run
+```
+
+Исполняемый архив после сборки: `target/hotel-service-0.1.0-SNAPSHOT-exec.jar`.
+
+Проверка: `mvn -pl hotel-service -am test`
+
+## Данные
+
+«Астория»: комнаты `101` (5 броней), `102` (0) и `201` в ремонте. «Нева»: комната `1`.
+
+Таблицы: `hotels`, `rooms`, `room_locks`. Схема — `src/main/resources/schema.sql`.
+
+`confirm-availability` и `release` вызываются Booking напрямую, не через шлюз.
