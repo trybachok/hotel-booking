@@ -10,7 +10,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "bookings")
 public class BookingEntity {
@@ -40,64 +44,4 @@ public class BookingEntity {
 
   @Column(name = "request_id", nullable = false, unique = true, length = 80)
   private String requestId;
-
-  public Long getId() {
-    return id;
-  }
-
-  public Long getUserId() {
-    return userId;
-  }
-
-  public void setUserId(Long userId) {
-    this.userId = userId;
-  }
-
-  public Long getRoomId() {
-    return roomId;
-  }
-
-  public void setRoomId(Long roomId) {
-    this.roomId = roomId;
-  }
-
-  public LocalDate getStartDate() {
-    return startDate;
-  }
-
-  public void setStartDate(LocalDate startDate) {
-    this.startDate = startDate;
-  }
-
-  public LocalDate getEndDate() {
-    return endDate;
-  }
-
-  public void setEndDate(LocalDate endDate) {
-    this.endDate = endDate;
-  }
-
-  public BookingStatus getStatus() {
-    return status;
-  }
-
-  public void setStatus(BookingStatus status) {
-    this.status = status;
-  }
-
-  public Instant getCreatedAt() {
-    return createdAt;
-  }
-
-  public void setCreatedAt(Instant createdAt) {
-    this.createdAt = createdAt;
-  }
-
-  public String getRequestId() {
-    return requestId;
-  }
-
-  public void setRequestId(String requestId) {
-    this.requestId = requestId;
-  }
 }

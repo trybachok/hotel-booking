@@ -16,12 +16,17 @@ public class UserServiceImpl implements UserService {
   private final UserRepository users;
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
+  private final UserMapper userMapper;
 
   public UserServiceImpl(
-      UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService) {
+      UserRepository users,
+      PasswordEncoder passwordEncoder,
+      JwtService jwtService,
+      UserMapper userMapper) {
     this.users = users;
     this.passwordEncoder = passwordEncoder;
     this.jwtService = jwtService;
+    this.userMapper = userMapper;
   }
 
   @Override
@@ -102,7 +107,7 @@ public class UserServiceImpl implements UserService {
     return new TokenResponse(jwtService.issue(user), "Bearer", jwtService.expiresInSeconds());
   }
 
-  private static UserResponse toResponse(UserEntity user) {
-    return new UserResponse(user.getId(), user.getUsername(), user.getRole());
+  private UserResponse toResponse(UserEntity user) {
+    return userMapper.toResponse(user);
   }
 }

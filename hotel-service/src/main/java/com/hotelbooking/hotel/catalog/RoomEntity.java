@@ -9,7 +9,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "rooms")
 public class RoomEntity {
@@ -30,40 +34,4 @@ public class RoomEntity {
 
   @Column(name = "times_booked", nullable = false)
   private int timesBooked;
-
-  public Long getId() {
-    return id;
-  }
-
-  public HotelEntity getHotel() {
-    return hotel;
-  }
-
-  public void setHotel(HotelEntity hotel) {
-    this.hotel = hotel;
-  }
-
-  public String getNumber() {
-    return number;
-  }
-
-  public void setNumber(String number) {
-    this.number = number;
-  }
-
-  public boolean isAvailable() {
-    return available;
-  }
-
-  public void setAvailable(boolean available) {
-    this.available = available;
-  }
-
-  public int getTimesBooked() {
-    return timesBooked;
-  }
-
-  public void setTimesBooked(int timesBooked) {
-    this.timesBooked = timesBooked;
-  }
 }

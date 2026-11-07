@@ -25,12 +25,17 @@ public class RoomCatalogService {
   private final RoomRepository rooms;
   private final RoomLockRepository locks;
   private final HotelCatalogService hotels;
+  private final CatalogMapper catalogMapper;
 
   public RoomCatalogService(
-      RoomRepository rooms, RoomLockRepository locks, HotelCatalogService hotels) {
+      RoomRepository rooms,
+      RoomLockRepository locks,
+      HotelCatalogService hotels,
+      CatalogMapper catalogMapper) {
     this.rooms = rooms;
     this.locks = locks;
     this.hotels = hotels;
+    this.catalogMapper = catalogMapper;
   }
 
   @Transactional
@@ -44,7 +49,7 @@ public class RoomCatalogService {
     room.setNumber(request.number().trim());
     room.setAvailable(request.available() == null || request.available());
     room.setTimesBooked(0);
-    return toResponse(rooms.save(room));
+    return catalogMapper.toResponse(rooms.save(room));
   }
 
   @Transactional
@@ -56,7 +61,7 @@ public class RoomCatalogService {
     }
     room.setNumber(number);
     room.setAvailable(request.available());
-    return toResponse(room);
+    return catalogMapper.toResponse(room);
   }
 
   @Transactional
@@ -73,9 +78,7 @@ public class RoomCatalogService {
   @Transactional(readOnly = true)
   public List<RoomResponse> freeRooms(Long hotelId, LocalDate start, LocalDate end) {
     StayInterval.requireValid(start, end);
-    return rooms.findFree(hotelId, start, end).stream()
-        .map(RoomCatalogService::toResponse)
-        .toList();
+    return rooms.findFree(hotelId, start, end).stream().map(catalogMapper::toResponse).toList();
   }
 
   @Transactional(readOnly = true)
@@ -93,7 +96,7 @@ public class RoomCatalogService {
       if (!existing.getRoom().getId().equals(roomId)) {
         throw new ResponseStatusException(HttpStatus.CONFLICT, "Request id is already used");
       }
-      return toLock(existing);
+      return catalogMapper.toLock(existing);
     }
     RoomEntity room =
         rooms
@@ -120,7 +123,7 @@ public class RoomCatalogService {
     } finally {
       MDC.remove("bookingId");
     }
-    return toLock(lock);
+    return catalogMapper.toLock(lock);
   }
 
   @Transactional
@@ -154,7 +157,7 @@ public class RoomCatalogService {
       }
       grouped.computeIfAbsent(room.getHotel().getId(), ignored -> new ArrayList<>()).add(room);
     }
-    return grouped.values().stream().map(RoomCatalogService::toLoad).toList();
+    return grouped.values().stream().map(this::toLoad).toList();
   }
 
   private RoomEntity require(long id) {
@@ -163,25 +166,7 @@ public class RoomCatalogService {
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
   }
 
-  private static RoomResponse toResponse(RoomEntity room) {
-    return new RoomResponse(
-        room.getId(),
-        room.getHotel().getId(),
-        room.getNumber(),
-        room.isAvailable(),
-        room.getTimesBooked());
-  }
-
-  private static LockResponse toLock(RoomLockEntity lock) {
-    return new LockResponse(
-        lock.getRoom().getId(),
-        lock.getRequestId(),
-        lock.getBookingId(),
-        lock.getStartDate(),
-        lock.getEndDate());
-  }
-
-  private static HotelLoadResponse toLoad(List<RoomEntity> hotelRooms) {
+  private HotelLoadResponse toLoad(List<RoomEntity> hotelRooms) {
     HotelEntity hotel = hotelRooms.get(0).getHotel();
     int available = (int) hotelRooms.stream().filter(RoomEntity::isAvailable).count();
     int booked = hotelRooms.stream().mapToInt(RoomEntity::getTimesBooked).sum();
@@ -191,7 +176,7 @@ public class RoomCatalogService {
                 Comparator.comparingInt(RoomEntity::getTimesBooked)
                     .reversed()
                     .thenComparing(RoomEntity::getId))
-            .map(RoomCatalogService::toResponse)
+            .map(catalogMapper::toResponse)
             .toList();
     return new HotelLoadResponse(
         hotel.getId(), hotel.getName(), hotelRooms.size(), available, booked, responses);

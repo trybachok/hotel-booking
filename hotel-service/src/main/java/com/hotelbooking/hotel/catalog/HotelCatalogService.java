@@ -11,10 +11,13 @@ public class HotelCatalogService {
 
   private final HotelRepository hotels;
   private final RoomRepository rooms;
+  private final CatalogMapper catalogMapper;
 
-  public HotelCatalogService(HotelRepository hotels, RoomRepository rooms) {
+  public HotelCatalogService(
+      HotelRepository hotels, RoomRepository rooms, CatalogMapper catalogMapper) {
     this.hotels = hotels;
     this.rooms = rooms;
+    this.catalogMapper = catalogMapper;
   }
 
   @Transactional
@@ -22,7 +25,7 @@ public class HotelCatalogService {
     HotelEntity hotel = new HotelEntity();
     hotel.setName(request.name().trim());
     hotel.setAddress(request.address().trim());
-    return toResponse(hotels.save(hotel));
+    return catalogMapper.toResponse(hotels.save(hotel));
   }
 
   @Transactional(readOnly = true)
@@ -31,12 +34,12 @@ public class HotelCatalogService {
         name == null || name.isBlank()
             ? hotels.findAllByOrderByNameAsc()
             : hotels.findByNameContainingIgnoreCaseOrderByNameAsc(name.trim());
-    return found.stream().map(HotelCatalogService::toResponse).toList();
+    return found.stream().map(catalogMapper::toResponse).toList();
   }
 
   @Transactional(readOnly = true)
   public HotelResponse get(long id) {
-    return toResponse(require(id));
+    return catalogMapper.toResponse(require(id));
   }
 
   @Transactional
@@ -44,7 +47,7 @@ public class HotelCatalogService {
     HotelEntity hotel = require(id);
     hotel.setName(request.name().trim());
     hotel.setAddress(request.address().trim());
-    return toResponse(hotel);
+    return catalogMapper.toResponse(hotel);
   }
 
   @Transactional
@@ -62,9 +65,5 @@ public class HotelCatalogService {
     return hotels
         .findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hotel not found"));
-  }
-
-  private static HotelResponse toResponse(HotelEntity hotel) {
-    return new HotelResponse(hotel.getId(), hotel.getName(), hotel.getAddress());
   }
 }

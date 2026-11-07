@@ -10,7 +10,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "room_locks")
 public class RoomLockEntity {
@@ -34,48 +38,4 @@ public class RoomLockEntity {
 
   @Column(name = "end_date", nullable = false)
   private LocalDate endDate;
-
-  public Long getId() {
-    return id;
-  }
-
-  public RoomEntity getRoom() {
-    return room;
-  }
-
-  public void setRoom(RoomEntity room) {
-    this.room = room;
-  }
-
-  public long getBookingId() {
-    return bookingId;
-  }
-
-  public void setBookingId(long bookingId) {
-    this.bookingId = bookingId;
-  }
-
-  public String getRequestId() {
-    return requestId;
-  }
-
-  public void setRequestId(String requestId) {
-    this.requestId = requestId;
-  }
-
-  public LocalDate getStartDate() {
-    return startDate;
-  }
-
-  public void setStartDate(LocalDate startDate) {
-    this.startDate = startDate;
-  }
-
-  public LocalDate getEndDate() {
-    return endDate;
-  }
-
-  public void setEndDate(LocalDate endDate) {
-    this.endDate = endDate;
-  }
 }

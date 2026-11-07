@@ -27,12 +27,17 @@ public class BookingServiceImpl implements BookingService {
   private final BookingRepository bookings;
   private final HotelClient hotel;
   private final TransactionTemplate transactions;
+  private final BookingMapper bookingMapper;
 
   public BookingServiceImpl(
-      BookingRepository bookings, HotelClient hotel, TransactionTemplate transactions) {
+      BookingRepository bookings,
+      HotelClient hotel,
+      TransactionTemplate transactions,
+      BookingMapper bookingMapper) {
     this.bookings = bookings;
     this.hotel = hotel;
     this.transactions = transactions;
+    this.bookingMapper = bookingMapper;
   }
 
   @Override
@@ -102,7 +107,7 @@ public class BookingServiceImpl implements BookingService {
         bookings.findByUserId(
             userId, PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
     return new BookingPage(
-        result.stream().map(BookingServiceImpl::toResponse).toList(),
+        result.stream().map(this::toResponse).toList(),
         result.getNumber(),
         result.getSize(),
         result.getTotalElements(),
@@ -260,16 +265,8 @@ public class BookingServiceImpl implements BookingService {
     }
   }
 
-  private static BookingResponse toResponse(BookingEntity booking) {
-    return new BookingResponse(
-        booking.getId(),
-        booking.getUserId(),
-        booking.getRoomId(),
-        booking.getStartDate(),
-        booking.getEndDate(),
-        booking.getStatus(),
-        booking.getCreatedAt(),
-        booking.getRequestId());
+  private BookingResponse toResponse(BookingEntity booking) {
+    return bookingMapper.toResponse(booking);
   }
 
   private static final class RoomUnavailable extends RuntimeException {}
