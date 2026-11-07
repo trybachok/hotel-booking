@@ -77,6 +77,7 @@ public class UserServiceImpl implements UserService {
     if (request.password() != null && !request.password().isBlank()) {
       user.setPassword(passwordEncoder.encode(request.password()));
     }
+    saveUser(user);
     return toResponse(user);
   }
 
@@ -103,7 +104,30 @@ public class UserServiceImpl implements UserService {
     user.setUsername(username);
     user.setPassword(passwordEncoder.encode(password));
     user.setRole(role);
-    return users.save(user);
+    return saveUser(user);
+  }
+
+  private UserEntity saveUser(UserEntity user) {
+    try {
+      return users.saveAndFlush(user);
+    } catch (DataIntegrityViolationException failure) {
+      if (duplicateUsername(failure)) {
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists", failure);
+      }
+      throw failure;
+    }
+  }
+
+  private static boolean duplicateUsername(Throwable failure) {
+    Throwable current = failure;
+    while (current != null) {
+      String message = current.getMessage();
+      if (message != null && message.toLowerCase().contains("uk_users_username")) {
+        return true;
+      }
+      current = current.getCause();
+    }
+    return false;
   }
 
   private void ensureUsernameAvailable(String username, Long currentId) {
