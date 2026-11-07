@@ -36,9 +36,12 @@ mvn -B -ntp verify
 
 ## Запуск
 
-Четыре процесса, сначала реестр:
+Сначала реестр, затем Booking, Hotel и шлюз. Перед запуском задайте секрет подписи и пароль администратора. Секрет не короче 32 символов. Без секрета сервисы не стартуют. Без пароля администратор не создаётся.
 
 ```bash
+export APP_JWT_SECRET='replace-with-your-own-secret-at-least-32-bytes'
+export APP_ADMIN_USERNAME=admin
+export APP_ADMIN_PASSWORD='replace-with-your-own-password'
 mvn -pl eureka-server spring-boot:run
 mvn -pl booking-service spring-boot:run
 mvn -pl hotel-service spring-boot:run
@@ -70,9 +73,9 @@ OpenAPI:
 
 ## Учётные записи
 
-Токен HS256 живёт один час. В нём есть `sub`, `role` и `uid`. Booking выпускает токен, Booking и Hotel проверяют подпись и срок сами. Роли: `USER` и `ADMIN`.
+Токен HS256 живёт один час. В нём есть `sub`, `role` и `uid`. Booking выпускает токен, Booking и Hotel проверяют подпись и срок сами. Роли: `USER`, `ADMIN` и служебная `SERVICE`. Другое значение `role` прав не даёт.
 
-В базе заранее есть администратор `admin` / `admin12345`. Это локальный пароль для разработки.
+Администратор создаётся при старте Booking, если заданы `APP_ADMIN_USERNAME` и `APP_ADMIN_PASSWORD`. Пароль в репозиторий не входит. Гость `demo` / `password1` уже есть в базе.
 
 Регистрация создаёт пользователя с ролью `USER` и сразу возвращает токен:
 
@@ -87,7 +90,7 @@ curl -s -X POST http://localhost:8080/user/register \
 ```bash
 curl -s -X POST http://localhost:8080/user/auth \
   -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"admin12345"}'
+  -d "{\"username\":\"${APP_ADMIN_USERNAME}\",\"password\":\"${APP_ADMIN_PASSWORD}\"}"
 ```
 
 Дальше заголовок `Authorization: Bearer <token>`.
@@ -120,8 +123,8 @@ curl -s -X POST http://localhost:8080/user/auth \
 | `GET /api/rooms?startDate&endDate` | USER, необязательный `hotelId` |
 | `GET /api/rooms/recommend?startDate&endDate` | USER |
 | `GET /api/rooms/statistics` | ADMIN |
-| `POST /api/rooms/{id}/confirm-availability` | только прямой вызов сервиса, не через шлюз |
-| `POST /api/rooms/{id}/release` | только прямой вызов сервиса, не через шлюз |
+| `POST /api/rooms/{id}/confirm-availability` | только роль `SERVICE`, прямой вызов Booking, не через шлюз |
+| `POST /api/rooms/{id}/release` | только роль `SERVICE`, прямой вызов Booking, не через шлюз |
 
 Повтор того же `requestId` не увеличивает `times_booked` второй раз. Повторный `release` ничего не меняет. В базе заранее есть отели «Астория» и «Нева».
 
@@ -174,6 +177,6 @@ Hotel:
 
 ## Демонстрация
 
-Пароль `demo` / `password1`. У него уже есть прошедшая бронь `2026-11-01`–`2026-11-03`. Администратор — `admin` / `admin12345`.
+Пароль `demo` / `password1`. У него уже есть прошедшая бронь `2026-11-01`–`2026-11-03`. Администратор входит паролем из `APP_ADMIN_PASSWORD`.
 
 Рекомендация «Астории» на будущие даты ставит комнату `102` раньше `101`, потому что у `102` меньше `times_booked`. Комната `201` не попадает в список: она в ремонте. Логи пишутся JSON и содержат `traceId`; шаги брони ещё содержат `bookingId`.

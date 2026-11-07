@@ -1,8 +1,4 @@
 INSERT INTO users (username, password, role)
-SELECT 'admin', '$2a$10$zogokw7XcrLyEe.w.GJ2.OU5TFluE1VCitaWdqLmYcq/0m2h2Idt2', 'ADMIN'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
-
-INSERT INTO users (username, password, role)
 SELECT 'demo', '$2a$10$boLeejqdPrwUMgJ5Z5.O0e08sEsAJCSRNMW9viqF629ZQc280FGtO', 'USER'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'demo');
 

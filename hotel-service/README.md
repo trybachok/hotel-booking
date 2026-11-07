@@ -24,4 +24,4 @@ mvn -pl hotel-service spring-boot:run
 
 Таблицы: `hotels`, `rooms`, `room_locks`. Схема — `src/main/resources/schema.sql`.
 
-`confirm-availability` и `release` вызываются Booking напрямую, не через шлюз.
+`confirm-availability` и `release` принимают только роль `SERVICE`. Booking вызывает их напрямую своим служебным токеном. Пользовательский и администраторский токены получают 403. Шлюз эти пути не публикует. Секрет подписи — `APP_JWT_SECRET`.

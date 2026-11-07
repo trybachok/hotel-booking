@@ -4,7 +4,7 @@
 
 ## За что отвечает
 
-Регистрация, вход, JWT на один час, роли `USER` и `ADMIN`. Создание брони в статусе `PENDING`, подтверждение номера в Hotel и перевод в `CONFIRMED` или `CANCELLED`.
+Регистрация, вход, JWT на один час, роли `USER` и `ADMIN`. Создание брони в статусе `PENDING`, подтверждение номера в Hotel служебным токеном `SERVICE` и перевод в `CONFIRMED` или `CANCELLED`.
 
 ## Запуск
 
@@ -18,6 +18,6 @@ mvn -pl booking-service spring-boot:run
 
 ## Данные
 
-`admin` / `admin12345`, `demo` / `password1`. У `demo` есть прошедшая бронь `seed-astoria-101` на номер `1`.
+`demo` / `password1` и прошедшая бронь `seed-astoria-101` на номер `1`. Администратор создаётся из `APP_ADMIN_USERNAME` и `APP_ADMIN_PASSWORD`. Секрет подписи — `APP_JWT_SECRET`.
 
 Таблицы: `users`, `bookings`. Схема — `src/main/resources/schema.sql`.

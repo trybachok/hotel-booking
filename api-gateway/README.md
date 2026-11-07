@@ -10,7 +10,7 @@
 
 ## Запуск
 
-После Eureka, Booking и Hotel:
+После Eureka, Booking и Hotel. Секрет подписи — тот же `APP_JWT_SECRET`.
 
 ```bash
 mvn -pl api-gateway spring-boot:run
