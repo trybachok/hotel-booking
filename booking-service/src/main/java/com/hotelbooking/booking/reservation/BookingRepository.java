@@ -12,6 +12,8 @@ public interface BookingRepository extends JpaRepository<BookingEntity, Long> {
 
   Optional<BookingEntity> findByRequestId(String requestId);
 
+  boolean existsByUserId(Long userId);
+
   Page<BookingEntity> findByUserId(Long userId, Pageable pageable);
 
   @Query(

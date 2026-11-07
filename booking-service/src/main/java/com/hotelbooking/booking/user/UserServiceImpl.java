@@ -1,7 +1,9 @@
 package com.hotelbooking.booking.user;
 
+import com.hotelbooking.booking.reservation.BookingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,16 +16,19 @@ public class UserServiceImpl implements UserService {
   private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
   private final UserRepository users;
+  private final BookingRepository bookings;
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final UserMapper userMapper;
 
   public UserServiceImpl(
       UserRepository users,
+      BookingRepository bookings,
       PasswordEncoder passwordEncoder,
       JwtService jwtService,
       UserMapper userMapper) {
     this.users = users;
+    this.bookings = bookings;
     this.passwordEncoder = passwordEncoder;
     this.jwtService = jwtService;
     this.userMapper = userMapper;
@@ -81,7 +86,15 @@ public class UserServiceImpl implements UserService {
     if (!users.existsById(id)) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
     }
-    users.deleteById(id);
+    if (bookings.existsByUserId(id)) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "User has bookings");
+    }
+    try {
+      users.deleteById(id);
+      users.flush();
+    } catch (DataIntegrityViolationException conflict) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "User has bookings", conflict);
+    }
   }
 
   private UserEntity newUser(String username, String password, UserRole role) {

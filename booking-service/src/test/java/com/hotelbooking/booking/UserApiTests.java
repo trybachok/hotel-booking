@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.hotelbooking.booking.user.UserRepository;
 import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.MvcResult;
 class UserApiTests {
 
   @Autowired private MockMvc mockMvc;
+  @Autowired private UserRepository users;
 
   @Test
   void registerIssuesOneHourUserToken() throws Exception {
@@ -124,6 +126,42 @@ class UserApiTests {
     mockMvc
         .perform(delete("/user").param("id", id).header("Authorization", "Bearer " + admin))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void adminCannotDeleteUserWithBookings() throws Exception {
+    String admin = adminToken();
+    long id = users.findByUsername("demo").orElseThrow().getId();
+
+    mockMvc
+        .perform(
+            delete("/user")
+                .param("id", Long.toString(id))
+                .header("Authorization", "Bearer " + admin))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.message").value("User has bookings"));
+
+    mockMvc
+        .perform(
+            post("/user/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"demo\",\"password\":\"password1\"}"))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void generatedTraceIdIsCopiedIntoNotFound() throws Exception {
+    String token = register("trace-" + System.nanoTime(), "password1");
+    MvcResult result =
+        mockMvc
+            .perform(get("/missing").header("Authorization", "Bearer " + token))
+            .andExpect(status().isNotFound())
+            .andReturn();
+    String traceId = result.getResponse().getHeader("traceId");
+    org.junit.jupiter.api.Assertions.assertNotNull(traceId);
+    org.junit.jupiter.api.Assertions.assertEquals(
+        traceId,
+        com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), "$.traceId"));
   }
 
   @Test
