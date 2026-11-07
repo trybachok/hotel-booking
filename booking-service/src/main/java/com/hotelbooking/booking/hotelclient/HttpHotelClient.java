@@ -25,10 +25,7 @@ public class HttpHotelClient {
         () ->
             restClient
                 .get()
-                .uri(
-                    "http://hotel-service/api/rooms/recommend?startDate={start}&endDate={end}",
-                    start,
-                    end)
+                .uri("/api/rooms/recommend?startDate={start}&endDate={end}", start, end)
                 .header("Authorization", "Bearer " + bearerToken)
                 .retrieve()
                 .onStatus(
@@ -55,7 +52,7 @@ public class HttpHotelClient {
         () -> {
           restClient
               .post()
-              .uri("http://hotel-service/api/rooms/{id}/confirm-availability", roomId)
+              .uri("/api/rooms/{id}/confirm-availability", roomId)
               .header("Authorization", "Bearer " + bearerToken)
               .body(new ConfirmBody(requestId, bookingId, start.toString(), end.toString()))
               .retrieve()
@@ -79,7 +76,7 @@ public class HttpHotelClient {
         () -> {
           restClient
               .post()
-              .uri("http://hotel-service/api/rooms/{id}/release", roomId)
+              .uri("/api/rooms/{id}/release", roomId)
               .header("Authorization", "Bearer " + bearerToken)
               .body(new ReleaseBody(requestId))
               .retrieve()
