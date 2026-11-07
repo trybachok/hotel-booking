@@ -82,7 +82,7 @@ public class BookingServiceImpl implements BookingService {
       try {
         booking = savePending(booking, userId, roomId, request);
       } catch (DuplicateRequestId duplicate) {
-        return resume(request.requestId(), userId, bearerToken);
+        return currentBooking(request.requestId(), userId);
       }
       try {
         return confirmOrCompensate(booking, bearerToken, !last);
@@ -201,7 +201,7 @@ public class BookingServiceImpl implements BookingService {
     return bookings.countOverlap(roomId, start, end, excludeId) > 0;
   }
 
-  private BookingResponse resume(String requestId, long userId, String bearerToken) {
+  private BookingResponse currentBooking(String requestId, long userId) {
     BookingEntity existing =
         bookings
             .findByRequestId(requestId)
@@ -209,7 +209,9 @@ public class BookingServiceImpl implements BookingService {
                 () ->
                     new ResponseStatusException(
                         HttpStatus.CONFLICT, "Request is already being processed"));
-    return resume(existing, userId, bearerToken);
+    MDC.put("bookingId", Long.toString(existing.getId()));
+    ensureOwner(existing, userId);
+    return toResponse(existing);
   }
 
   private BookingResponse resume(BookingEntity existing, long userId, String bearerToken) {
