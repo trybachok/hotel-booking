@@ -10,6 +10,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -54,12 +55,7 @@ public class BookingServiceImpl implements BookingService {
       CreateBookingRequest request, long userId, String bearerToken) {
     BookingEntity existing = bookings.findByRequestId(request.requestId()).orElse(null);
     if (existing != null) {
-      MDC.put("bookingId", Long.toString(existing.getId()));
-      ensureOwner(existing, userId);
-      if (existing.getStatus() != BookingStatus.PENDING) {
-        return toResponse(existing);
-      }
-      return confirmOrCompensate(existing, bearerToken, false);
+      return resume(existing, userId, bearerToken);
     }
     List<Long> rooms;
     try {
@@ -83,7 +79,11 @@ public class BookingServiceImpl implements BookingService {
         }
         continue;
       }
-      booking = savePending(booking, userId, roomId, request);
+      try {
+        booking = savePending(booking, userId, roomId, request);
+      } catch (DuplicateRequestId duplicate) {
+        return resume(request.requestId(), userId, bearerToken);
+      }
       try {
         return confirmOrCompensate(booking, bearerToken, !last);
       } catch (RoomUnavailable unavailable) {
@@ -201,29 +201,71 @@ public class BookingServiceImpl implements BookingService {
     return bookings.countOverlap(roomId, start, end, excludeId) > 0;
   }
 
+  private BookingResponse resume(String requestId, long userId, String bearerToken) {
+    BookingEntity existing =
+        bookings
+            .findByRequestId(requestId)
+            .orElseThrow(
+                () ->
+                    new ResponseStatusException(
+                        HttpStatus.CONFLICT, "Request is already being processed"));
+    return resume(existing, userId, bearerToken);
+  }
+
+  private BookingResponse resume(BookingEntity existing, long userId, String bearerToken) {
+    MDC.put("bookingId", Long.toString(existing.getId()));
+    ensureOwner(existing, userId);
+    if (existing.getStatus() != BookingStatus.PENDING) {
+      return toResponse(existing);
+    }
+    return confirmOrCompensate(existing, bearerToken, false);
+  }
+
   private BookingEntity savePending(
       BookingEntity current, long userId, long roomId, CreateBookingRequest request) {
-    BookingEntity saved =
-        transactions.execute(
-            status -> {
-              BookingEntity booking =
-                  current == null
-                      ? bookings.findByRequestId(request.requestId()).orElseGet(BookingEntity::new)
-                      : bookings.findById(current.getId()).orElseThrow();
-              if (booking.getId() == null) {
-                booking.setUserId(userId);
-                booking.setRequestId(request.requestId());
-                booking.setCreatedAt(Instant.now());
-                booking.setStartDate(request.startDate());
-                booking.setEndDate(request.endDate());
-              }
-              booking.setRoomId(roomId);
-              booking.setStatus(BookingStatus.PENDING);
-              return bookings.save(booking);
-            });
+    BookingEntity saved;
+    try {
+      saved =
+          transactions.execute(
+              status -> {
+                BookingEntity booking =
+                    current == null
+                        ? bookings
+                            .findByRequestId(request.requestId())
+                            .orElseGet(BookingEntity::new)
+                        : bookings.findById(current.getId()).orElseThrow();
+                if (booking.getId() == null) {
+                  booking.setUserId(userId);
+                  booking.setRequestId(request.requestId());
+                  booking.setCreatedAt(Instant.now());
+                  booking.setStartDate(request.startDate());
+                  booking.setEndDate(request.endDate());
+                }
+                booking.setRoomId(roomId);
+                booking.setStatus(BookingStatus.PENDING);
+                return bookings.saveAndFlush(booking);
+              });
+    } catch (DataIntegrityViolationException failure) {
+      if (!duplicateRequest(failure)) {
+        throw failure;
+      }
+      throw new DuplicateRequestId();
+    }
     log.info("bookingId={} status PENDING roomId={}", saved.getId(), saved.getRoomId());
     MDC.put("bookingId", Long.toString(saved.getId()));
     return saved;
+  }
+
+  private static boolean duplicateRequest(Throwable failure) {
+    Throwable current = failure;
+    while (current != null) {
+      String message = current.getMessage();
+      if (message != null && message.toLowerCase().contains("uk_bookings_request")) {
+        return true;
+      }
+      current = current.getCause();
+    }
+    return false;
   }
 
   private BookingEntity markConfirmed(long id) {
@@ -270,4 +312,6 @@ public class BookingServiceImpl implements BookingService {
   }
 
   private static final class RoomUnavailable extends RuntimeException {}
+
+  private static final class DuplicateRequestId extends RuntimeException {}
 }
