@@ -68,7 +68,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
             "Unexpected error",
             path(request),
             traceId(request));
-    log.error("status=500 path={} message=Unexpected error", path(request));
+    log.error("status=500 path={} message=Unexpected error", path(request), exception);
     return ResponseEntity.internalServerError().body(body);
   }
 
