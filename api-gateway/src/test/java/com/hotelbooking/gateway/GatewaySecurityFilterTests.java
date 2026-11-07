@@ -2,6 +2,8 @@ package com.hotelbooking.gateway;
 
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
@@ -20,6 +22,7 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -83,6 +86,24 @@ class GatewaySecurityFilterTests {
         .expectBody()
         .jsonPath("$.message")
         .isEqualTo("Invalid token");
+  }
+
+  @Test
+  void routeFailureKeepsTheGeneratedTraceId() {
+    EntityExchangeResult<byte[]> result =
+        webTestClient
+            .get()
+            .uri("/api/hotels")
+            .header("Authorization", "Bearer " + token())
+            .exchange()
+            .expectStatus()
+            .is5xxServerError()
+            .expectBody()
+            .returnResult();
+    String traceId = result.getResponseHeaders().getFirst("traceId");
+    assertNotNull(traceId);
+    String body = new String(result.getResponseBody(), java.nio.charset.StandardCharsets.UTF_8);
+    assertTrue(body.contains(traceId));
   }
 
   @Test

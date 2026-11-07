@@ -36,6 +36,21 @@ class InternalRouteGuardTests {
   }
 
   @Test
+  void encodedConfirmIsNotPublished() {
+    webTestClient
+        .post()
+        .uri(builder -> builder.path("/api/rooms/7/confirm%2Davailability").build(true))
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+  }
+
+  @Test
+  void matrixReleaseIsNotPublished() {
+    webTestClient.post().uri("/api/rooms/7/release;keep=1").exchange().expectStatus().isNotFound();
+  }
+
+  @Test
   void confirmAvailabilityIsNotPublished() {
     webTestClient
         .post()

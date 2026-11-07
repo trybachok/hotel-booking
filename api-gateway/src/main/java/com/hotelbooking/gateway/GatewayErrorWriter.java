@@ -22,7 +22,7 @@ class GatewayErrorWriter {
   Mono<Void> write(ServerWebExchange exchange, HttpStatus status, String message) {
     exchange.getResponse().setStatusCode(status);
     exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
-    String traceId = exchange.getRequest().getHeaders().getFirst(TraceIdFilter.TRACE_ID);
+    String traceId = traceId(exchange);
     byte[] bytes;
     try {
       bytes =
@@ -40,5 +40,17 @@ class GatewayErrorWriter {
     }
     DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
     return exchange.getResponse().writeWith(Mono.just(buffer));
+  }
+
+  private static String traceId(ServerWebExchange exchange) {
+    String header = exchange.getRequest().getHeaders().getFirst(TraceIdFilter.TRACE_ID);
+    if (header != null && !header.isBlank()) {
+      return header;
+    }
+    Object attribute = exchange.getAttribute(TraceIdFilter.TRACE_ID);
+    if (attribute instanceof String value && !value.isBlank()) {
+      return value;
+    }
+    return null;
   }
 }

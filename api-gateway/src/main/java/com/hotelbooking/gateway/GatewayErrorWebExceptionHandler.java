@@ -40,14 +40,13 @@ public class GatewayErrorWebExceptionHandler implements WebExceptionHandler {
         message = responseStatus.getReason();
       }
     }
-    String traceId = exchange.getRequest().getHeaders().getFirst("traceId");
     ErrorDTO body =
         ErrorResponses.of(
             status.value(),
             status.getReasonPhrase(),
             message,
             exchange.getRequest().getPath().value(),
-            traceId == null || traceId.isBlank() ? null : traceId);
+            traceId(exchange));
     byte[] bytes;
     try {
       bytes = objectMapper.writeValueAsBytes(body);
@@ -59,5 +58,18 @@ public class GatewayErrorWebExceptionHandler implements WebExceptionHandler {
     exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
     DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
     return exchange.getResponse().writeWith(Mono.just(buffer));
+  }
+
+  private static String traceId(ServerWebExchange exchange) {
+    String header = exchange.getRequest().getHeaders().getFirst(TraceIdFilter.TRACE_ID);
+    if (header != null && !header.isBlank()) {
+      return header;
+    }
+    Object attribute = exchange.getAttribute(TraceIdFilter.TRACE_ID);
+    if (attribute instanceof String value && !value.isBlank()) {
+      return value;
+    }
+    String response = exchange.getResponse().getHeaders().getFirst(TraceIdFilter.TRACE_ID);
+    return response == null || response.isBlank() ? null : response;
   }
 }

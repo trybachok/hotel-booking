@@ -1,5 +1,7 @@
 package com.hotelbooking.gateway;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -27,11 +29,36 @@ public class InternalRouteGuard implements GlobalFilter, Ordered {
 
   @Override
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-    String path = exchange.getRequest().getPath().value();
-    if (!INTERNAL.matcher(path).matches()) {
+    if (!internal(exchange.getRequest().getURI().getRawPath())
+        && !internal(exchange.getRequest().getURI().getPath())) {
       return chain.filter(exchange);
     }
     return errors.write(exchange, HttpStatus.NOT_FOUND, "Not Found");
+  }
+
+  private static boolean internal(String path) {
+    if (path == null || path.isBlank()) {
+      return false;
+    }
+    String decoded = decode(path).replaceAll(";[^/]*", "");
+    return INTERNAL.matcher(decoded).matches()
+        || INTERNAL.matcher(path.replaceAll(";[^/]*", "")).matches();
+  }
+
+  private static String decode(String path) {
+    String current = path;
+    try {
+      for (int attempt = 0; attempt < 2; attempt++) {
+        String next = URLDecoder.decode(current, StandardCharsets.UTF_8);
+        if (next.equals(current)) {
+          return current;
+        }
+        current = next;
+      }
+    } catch (IllegalArgumentException invalid) {
+      return path;
+    }
+    return current;
   }
 
   @Override
