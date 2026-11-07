@@ -51,7 +51,9 @@ class BookingHotelIntegrationTests {
                 "--spring.cloud.discovery.enabled=false",
                 "--spring.datasource.url=jdbc:h2:mem:hotel-it;MODE=PostgreSQL",
                 "--spring.jpa.hibernate.ddl-auto=none",
-                "--spring.sql.init.mode=always");
+                "--spring.sql.init.mode=always",
+                "--app.jwt.secret=hotel-booking-test-secret-key-32b",
+                "--app.jwt.issuer=hotel-booking");
     hotelPort = ((WebServerApplicationContext) hotel).getWebServer().getPort();
     registry.add("hotel.client.base-url", () -> "http://127.0.0.1:" + hotelPort);
   }

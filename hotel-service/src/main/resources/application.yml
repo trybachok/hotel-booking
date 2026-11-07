@@ -19,7 +19,7 @@ spring:
 
 app:
   jwt:
-    secret: hotel-booking-dev-secret-key-32b
+    secret: ${APP_JWT_SECRET}
     ttl: 1h
     issuer: hotel-booking
 

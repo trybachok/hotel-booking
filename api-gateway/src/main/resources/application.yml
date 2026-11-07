@@ -43,5 +43,5 @@ springdoc:
 
 app:
   jwt:
-    secret: hotel-booking-dev-secret-key-32b
+    secret: ${APP_JWT_SECRET}
     issuer: hotel-booking
